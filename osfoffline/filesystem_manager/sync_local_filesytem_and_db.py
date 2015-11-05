@@ -46,42 +46,24 @@ class LocalDBSync(object):
         if local and not isinstance(local, ProperPath):
             raise InvalidItemType
 
-        out = []
-        children = self._get_children(local) + self._get_children(db)
-        # sort in order to get matching items next to each other.
-        children = sorted(children, key=lambda c: self._get_proper_path(c).full_path)
+        local_children = {}
+        db_children = {}
 
-        i = 0
-        while i < len(children):
-            if self._represent_same_values(children, i):
-                if isinstance(children[i], Base):
-                    to_add = (children[i + 1], children[i])
-                else:
-                    to_add = (children[i], children[i + 1])
-                # add an extra 1 because skipping next value
-                i += 1
-            elif isinstance(children[i], Base):
-                to_add = (None, children[i])
-            else:
-                to_add = (children[i], None)
-            out.append(to_add)
-            i += 1
+        for child in self._get_children(local):
+            assert isinstance(child, ProperPath)
+            local_children[child.full_path] = child
 
-        # assertions
-        for local, db in out:
-            if local is not None and db is not None:
-                assert isinstance(local, ProperPath)
-                assert isinstance(db, Base)
-                assert local == self._get_proper_path(db)
-            elif local is not None:
-                assert db is None
-                assert isinstance(local, ProperPath)
-            elif db is not None:
-                assert isinstance(db, Base)
-                assert local is None
-            else:
-                assert False
-        return out
+        for child in self._get_children(db):
+            assert isinstance(child, Base)
+            db_children[self._get_proper_path(child).full_path] = child
+
+        all_distinct_keys = set(local_children.keys()).union(set(db_children.keys()))
+
+        return [
+            (local_children.get(k), db_children.get(k))
+            for k in all_distinct_keys
+        ]
+
 
     def _get_children(self, item):
         if item is None:
@@ -141,11 +123,7 @@ class LocalDBSync(object):
                                   'not handle items of type '
                                   '{item_type}'.format(item_type=type(item)))
 
-    def _represent_same_values(self, children, i):
-        if i + 1 < len(children):
-            return self._get_proper_path(children[i]) == self._get_proper_path(children[i + 1])
-        else:
-            return False
+
 
     def _make_hash(self, local):
         assert isinstance(local, ProperPath)
