@@ -197,7 +197,7 @@ class OSFQuery(object):
         data = {
             'action': 'move',
             'path': local_file_folder.parent.osf_path if local_file_folder.parent else '{}:{}'.format(
-                local_file_folder.node_id, local_file_folder.provider),
+                local_file_folder.node.osf_id, local_file_folder.provider),
             'rename': local_file_folder.name
         }
 

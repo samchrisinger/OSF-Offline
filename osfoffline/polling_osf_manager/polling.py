@@ -491,7 +491,7 @@ class Poll(object):
         old_path = local_node.path
         local_node.title = remote_node.name
 
-        local_node.category = remote_node.category
+        local_node.category = remote_node.category or Node.COMPONENT
 
         save(session, local_node)
 
