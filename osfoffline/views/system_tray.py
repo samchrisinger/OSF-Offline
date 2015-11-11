@@ -10,6 +10,8 @@ from PyQt5.QtWidgets import (QDialog, QSystemTrayIcon,
                              QAction, QMenu)
 import osfoffline.alerts as AlertHandler
 from osfoffline.utils.validators import validate_containing_folder
+import osfoffline.views.rsc.resources  # need this import for the logo to work properly.
+
 from PyQt5.QtCore import pyqtSignal
 
 
@@ -47,7 +49,7 @@ class SystemTray(QDialog):
         self.tray_icon.setContextMenu(self.tray_icon_menu)
 
         # todo: do we have a better icon for use with desktop apps?
-        icon = QIcon(':/cos_logo.png')
+        icon = QIcon(':/cos_logo_backup.png')
         self.tray_icon.setIcon(icon)
 
     def start(self):
