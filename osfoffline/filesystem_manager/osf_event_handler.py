@@ -46,78 +46,94 @@ class OSFEventHandler(FileSystemEventHandler):
         :type event:
             :class:`DirMovedEvent` or :class:`FileMovedEvent`
         """
+        try:
+            src_path = ProperPath(event.src_path, event.is_directory)
+            dest_path = ProperPath(event.dest_path, event.is_directory)
+        except Exception:
+            logging.exception('Exception caught: Invalid path specified')
+            AlertHandler.warn('Error moving {}. {} will not be synced.'.format('folder' if event.is_directory else 'file', os.path.basename(event.src_path)))
+        else:
+            # determine and get what moved
+            if not self._already_exists(src_path):
+                try:
+                    self._get_parent_item_from_path(src_path)
+                except ItemNotInDB:
+                    # This means it was put into a place on the hierarchy being watched but otherwise not attached to a
+                    # node, so it needs to be added just like a new event rather than as a move.
 
-        src_path = ProperPath(event.src_path, event.is_directory)
-        dest_path = ProperPath(event.dest_path, event.is_directory)
-
-        # determine and get what moved
-        if not self._already_exists(src_path):
-            try:
-                self._get_parent_item_from_path(src_path)
-            except ItemNotInDB:
-                # This means it was put into a place on the hierarchy being watched but otherwise not attached to a
-                # node, so it needs to be added just like a new event rather than as a move.
-
-                # new_event = DirCreatedEvent(event.dest_path) if event.is_directory else FileCreatedEvent(event.dest_path)
-                # yield from self._create_file_or_folder(new_event, src_path=dest_path)
-                return
-            logging.warning('Tried to move item that does not exist: {}'.format(src_path.name))
-            return
-
-        item = self._get_item_by_path(src_path)
-
-        if isinstance(item, Node):
-            AlertHandler.warn('Cannot manipulate components locally. {} will stop syncing'.format(item.title))
-            return
-
-        # File
-
-        # rename
-        if item.name != dest_path.name:
-            item.name = dest_path.name
-            item.locally_renamed = True
-            save(session, item)
-            logging.info("renamed a file {}".format(dest_path.full_path))
-        # move
-        elif src_path != dest_path:
-            # check if file already exists in this moved location. If so, delete it from db.
-            try:
-                item_to_replace = self._get_item_by_path(dest_path)
-                session.delete(item_to_replace)
-                save(session)
-            except ItemNotInDB:
-                logging.info('file does not already exist in moved destination: {}'.format(dest_path.full_path))
-
-            try:
-                new_parent_item = self._get_parent_item_from_path(dest_path)
-            except ItemNotInDB:
-                # if you move a folder with contents in it, then watchdog gives you a move events for the contents into
-                # before the actual folder. These child events are unneccessary because folders are objects in our database.
-                # In addition, these child events fail at this spot because their paths are to the moved version of the contents
-                # but our database doesnt move the folder until we get the event to move that folder
+                    new_event = DirCreatedEvent(event.dest_path) if event.is_directory else FileCreatedEvent(event.dest_path)
+                    yield from self._create_file_or_folder(new_event, src_path=dest_path)
+                    return
+                logging.warning('Tried to move item that does not exist: {}'.format(src_path.name))
                 return
 
-            # move item
+            try:
+                item = self._get_item_by_path(src_path)
+            except ItemNotInDB:
+                logging.exception('Exception caught: Tried to move or rename item {}, but it could not be found in DB'.format(src_path.name))
+                AlertHandler.warn('Could not find item to manipulate. {} will not be synced'.format(src_path.name))
+            else:
+                if isinstance(item, Node):
+                    AlertHandler.warn('Cannot manipulate components locally. {} will stop syncing'.format(item.title))
+                    return
 
-            # set previous fields
-            item.previous_provider = item.provider
-            item.previous_node_osf_id = item.node.osf_id
+                # File
 
-            # update parent and node fields
-            # NOTE: this line makes it so the file no longer exists in the database.
-            # NOTE: item at this point is stale. Unclear why it matters though.
-            # NOTE: fix is above: session.refresh(item)
-            item.parent = new_parent_item if isinstance(new_parent_item, File) else None
-            item.node = new_parent_item if isinstance(new_parent_item, Node) else new_parent_item.node
+                # rename
+                if item.name != dest_path.name:
+                    item.name = dest_path.name
+                    item.locally_renamed = True
+                    try:
+                        save(session, item)
+                    except SQLAlchemyError:
+                        logging.exception('Exception caught: Could not save data for {}'.format(item))
+                        AlertHandler.warn('Error renaming file. {} will stop syncing.'.format(item.name))
+                    else:
+                        logging.info("renamed a file {}".format(dest_path.full_path))
+                # move
+                elif src_path != dest_path:
+                    # check if file already exists in this moved location. If so, delete it from db.
+                    try:
+                        item_to_replace = self._get_item_by_path(dest_path)
+                        session.delete(item_to_replace)
+                        save(session)
+                    except ItemNotInDB:
+                        logging.info('file does not already exist in moved destination: {}'.format(dest_path.full_path))
+                    except SQLAlchemyError:
+                        logging.exception('Exception caught: Could not save data for {}'.format(item_to_replace))
+                        AlertHandler.warn('Error moving file. {} will stop syncing.'.format(dest_path.name))
 
-            # basically always osfstorage. this is just meant to be extendible in the future to other providers
-            item.provider = new_parent_item.provider if isinstance(new_parent_item, File) else File.DEFAULT_PROVIDER
+                    try:
+                        new_parent_item = self._get_parent_item_from_path(dest_path)
+                    except ItemNotInDB:
+                        AlertHandler.warn('{} {} placed into invalid containing folder. It will not be synced.'.format(
+                            'Folder' if event.is_directory else 'File', dest_path.name))
+                    else:
+                        # move item
 
-            # flags
-            item.locally_moved = True
+                        # set previous fields
+                        item.previous_provider = item.provider
+                        item.previous_node_osf_id = item.node.osf_id
 
-            save(session, item)
-            logging.info('moved from {} to {}'.format(src_path.full_path, dest_path.full_path))
+                        # update parent and node fields
+                        # NOTE: this line makes it so the file no longer exists in the database.
+                        # NOTE: item at this point is stale. Unclear why it matters though.
+                        # NOTE: fix is above: session.refresh(item)
+                        item.parent = new_parent_item if isinstance(new_parent_item, File) else None
+                        item.node = new_parent_item if isinstance(new_parent_item, Node) else new_parent_item.node
+
+                        # basically always osfstorage. this is just meant to be extendible in the future to other providers
+                        item.provider = new_parent_item.provider if isinstance(new_parent_item, File) else File.DEFAULT_PROVIDER
+
+                        # flags
+                        item.locally_moved = True
+                        try:
+                            save(session, item)
+                        except SQLAlchemyError:
+                            logging.exception('Exception caught: Could not save data for {}'.format(item))
+                            AlertHandler.warn('Error moving file. {} will stop syncing.'.format(item.name))
+                        else:
+                            logging.info('moved from {} to {}'.format(src_path.full_path, dest_path.full_path))
 
     @asyncio.coroutine
     def _create_file_or_folder(self, event, src_path):
@@ -148,8 +164,13 @@ class OSFEventHandler(FileSystemEventHandler):
             except FileNotFoundError:
                 # if file doesnt exist just as we create it, then file is likely temp file. thus don't put it in db.
                 return
-        save(session, new_item, containing_item)
-        logging.info("created new {} {}".format('folder' if event.is_directory else 'file', src_path.full_path))
+        try:
+            save(session, new_item, containing_item)
+        except SQLAlchemyError:
+            logging.exception('Exception caught: Could not save data for {} in {}'.format(new_item, containing_item))
+            AlertHandler.warn('Error creating {}: {} will not be synced.'.format('file' if new_item.is_file else 'folder', new_item.name))
+        else:
+            logging.info("created new {} {}".format('folder' if event.is_directory else 'file', src_path.full_path))
 
     @asyncio.coroutine
     def on_created(self, event):
@@ -160,13 +181,17 @@ class OSFEventHandler(FileSystemEventHandler):
         :type event:
             :class:`DirCreatedEvent` or :class:`FileCreatedEvent`
         """
-        src_path = ProperPath(event.src_path, event.is_directory)
+        try:
+            src_path = ProperPath(event.src_path, event.is_directory)
+        except Exception:
+            logging.exception('Exception caught: Invalid path')
+            AlertHandler.warn('invalid path specified. {} will not be synced.'.format(os.path.basename(event.src_path)))
+        else:
+            # create new model
+            if self._already_exists(src_path):
+                return
 
-        # create new model
-        if self._already_exists(src_path):
-            return
-
-        yield from self._create_file_or_folder(event, src_path=src_path)
+            yield from self._create_file_or_folder(event, src_path=src_path)
 
     @asyncio.coroutine
     def on_modified(self, event):
@@ -180,21 +205,34 @@ class OSFEventHandler(FileSystemEventHandler):
 
         if isinstance(event, DirModifiedEvent):
             return
-        src_path = ProperPath(event.src_path, event.is_directory)
-
-        # get item
         try:
-            item = self._get_item_by_path(src_path)
-        except ItemNotInDB:
-            # todo: create file folder
-            logging.warning('file {} was modified but not already in db. create it in db.'.format(src_path))
-            return  # todo: remove this once above is implemented
+            src_path = ProperPath(event.src_path, event.is_directory)
+        except Exception:
+            logging.exception('Exception caught: Invalid path')
+            AlertHandler.warn('invalid path specified. {} will not be synced'.format(os.path.basename(event.src_path)))
+        else:
+            # get item
+            try:
+                item = self._get_item_by_path(src_path)
+            except ItemNotInDB:
+                # todo: create file folder
+                logging.warning('file {} was modified but not already in db. create it in db.'.format(src_path))
+                return  # todo: remove this once above is implemented
 
-        # update hash
-        item.update_hash()
+            # update hash
+            try:
+                item.update_hash()
+            except OSError:
+                logging.exception('File inaccessible during update_hash')
+                AlertHandler.warn('Error updating {}. {} inaccessible, will stop syncing.'.format('Folder' if event.is_directory else 'File', item.name))
+                return
 
-        # save
-        save(session, item)
+            # save
+            try:
+                save(session, item)
+            except SQLAlchemyError:
+                logging.exception('Exception caught: Could not save data for {}'.format(item))
+                AlertHandler.warn('Error updating {}. {} will stop syncing.'.format('folder' if event.is_directory else 'file', item.name))
 
     @asyncio.coroutine
     def on_deleted(self, event):
@@ -205,33 +243,40 @@ class OSFEventHandler(FileSystemEventHandler):
         :type event:
             :class:`DirDeletedEvent` or :class:`FileDeletedEvent`
         """
-        src_path = ProperPath(event.src_path, event.is_directory)
-
-        if not self._already_exists(src_path):
-            return
-
-        # get item
-        item = self._get_item_by_path(src_path)
-
-        # put item in delete state after waiting a second and
-        # checking to make sure the file was actually deleted
-        yield from asyncio.sleep(1)
-        if not os.path.exists(item.path):
-            item.locally_deleted = True
-            # nodes cannot be deleted online. THUS, delete it inside database. It will be recreated locally.
-            if isinstance(item, Node):
-                session.delete(item)
-                try:
-                    save(session)
-                except SQLAlchemyError as e:
-                    logging.exception('Error deleting node from database.')
+        try:
+            src_path = ProperPath(event.src_path, event.is_directory)
+        except Exception:
+            logging.exception('Exception caught: Invalid path')
+            AlertHandler.warn('invalid path specified. {} will not be synced'.format(os.path.basename(event.src_path)))
+        else:
+            if not self._already_exists(src_path):
                 return
+
+            # get item
             try:
-                save(session, item)
-            except SQLAlchemyError as e:
-                logging.exception('Error deleting node from database.')
+                item = self._get_item_by_path(src_path)
+            except ItemNotInDB:
+                logging.exception('Exception caught: Tried to delete item {}, but it was not found in DB'.format(src_path.name))
             else:
-                logging.info('{} set to be deleted'.format(src_path.full_path))
+                # put item in delete state after waiting a second and
+                # checking to make sure the file was actually deleted
+                yield from asyncio.sleep(1)
+                if not os.path.exists(item.path):
+                    item.locally_deleted = True
+                    # nodes cannot be deleted online. THUS, delete it inside database. It will be recreated locally.
+                    if isinstance(item, Node):
+                        session.delete(item)
+                        try:
+                            save(session)
+                        except SQLAlchemyError as e:
+                            logging.exception('Exception caught: Error deleting node {} from database.'.format(item.name))
+                        return
+                    try:
+                        save(session, item)
+                    except SQLAlchemyError as e:
+                        logging.exception('Exception caught: Error deleting {} {} from database.'.format('folder' if event.is_directory else 'file', item.name))
+                    else:
+                        logging.info('{} set to be deleted'.format(src_path.full_path))
 
     def dispatch(self, event):
         # basically, ignore all events that occur for 'Components' file or folder
@@ -262,7 +307,6 @@ class OSFEventHandler(FileSystemEventHandler):
             return False
 
     def _get_parent_item_from_path(self, path):
-        assert isinstance(path, ProperPath)
         containing_folder_path = path.parent
 
         if containing_folder_path == self.osf_folder:
@@ -272,7 +316,6 @@ class OSFEventHandler(FileSystemEventHandler):
 
     # todo: figure out how you can improve this
     def _get_item_by_path(self, path):
-        assert isinstance(path, ProperPath)
         for node in session.query(Node):
             if ProperPath(node.path, True) == path:
                 return node
@@ -283,11 +326,12 @@ class OSFEventHandler(FileSystemEventHandler):
         raise ItemNotInDB('item has path: {}'.format(path.full_path))
 
     def _event_is_for_components_file_folder(self, event):
-        if ProperPath(event.src_path, True).name == 'Components':
-            return True
         try:
-            if ProperPath(event.dest_path, True).name == 'Components':
+            if ProperPath(event.src_path, True).name == 'Components':
                 return True
-            return False
-        except AttributeError:
-            return False
+            try:
+                return ProperPath(event.dest_path, True).name == 'Components'
+            except AttributeError:
+                return False
+        except Exception:
+            pass  # Similar path-related error will occur and be caught later, better error message will be displayed then
