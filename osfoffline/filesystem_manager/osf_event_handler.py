@@ -61,8 +61,9 @@ class OSFEventHandler(FileSystemEventHandler):
                     # This means it was put into a place on the hierarchy being watched but otherwise not attached to a
                     # node, so it needs to be added just like a new event rather than as a move.
 
-                    new_event = DirCreatedEvent(event.dest_path) if event.is_directory else FileCreatedEvent(event.dest_path)
-                    yield from self._create_file_or_folder(new_event, src_path=dest_path)
+
+                    # new_event = DirCreatedEvent(event.dest_path) if event.is_directory else FileCreatedEvent(event.dest_path)
+                    # yield from self._create_file_or_folder(new_event, src_path=dest_path)
                     return
                 logging.warning('Tried to move item that does not exist: {}'.format(src_path.name))
                 return
@@ -101,7 +102,7 @@ class OSFEventHandler(FileSystemEventHandler):
                         # if you move a folder with contents in it, then watchdog gives you a move events for the contents into
                         # before the actual folder. These child events are unneccessary because folders are objects in our database.
                         # In addition, these child events fail at this spot because their paths are to the moved version of the contents
-                        # but our database doesnt move the folder until we get the event to move that folder
+                        # but our database doesnt move the folder until we get the event to move that folder.
                         logging.info('file does not already exist in moved destination: {}'.format(dest_path.full_path))
                     except SQLAlchemyError:
                         logging.exception('Exception caught: Could not save data for {}'.format(item_to_replace))
