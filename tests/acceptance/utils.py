@@ -1,5 +1,5 @@
 import  requests
-from osfoffline.client.osf import User, Node
+from osfoffline.client.osf import User, Node, NodeStorage
 import tests.acceptance.settings as settings
 import json
 from decorator import decorator
@@ -13,7 +13,7 @@ headers = {'Authorization':'Bearer {}'.format(user.oauth_token)}
 session = requests.Session()
 session.headers.update(headers)
 
-
+# for manipulate local
 def create_new_node(title, parent=None):
     """
 
@@ -226,3 +226,168 @@ def assert_local_has_components_folder():
 def assert_contains_project():
     if not os.path.isdir(settings.project_path):
         assert TestFail
+
+
+# for manipulate osf
+
+
+def wb_move_url(node_id, file_id):
+    # todo: this can be done in a better way
+    import osfoffline.settings as settings
+    return '{}/v1/resources/{}/providers/osfstorage/{}'.format(settings.FILE_BASE, node_id, file_id)
+
+def create_osf_folder(folder_name, nid, parent=None):
+    if parent:
+        path = parent['path'] + folder_name
+    else:
+        path = '/{}'.format(folder_name)
+    params = {
+        'path': path,
+        'provider': 'osfstorage',
+        'nid': nid
+    }
+    files_url = NodeStorage.get_url(nid)
+
+    resp = session.post(files_url, params=params)
+
+    assert resp.ok
+    return resp.json()
+
+def create_osf_file(file_name, nid, parent=None):
+    if parent:
+        path = parent['path'] + file_name
+    else:
+        path = '/{}'.format(file_name)
+    params = {
+        'path': path,
+        'provider': 'osfstorage',
+        'nid': nid
+    }
+    files_url = NodeStorage.get_url(nid)
+    path_to_file = os.path.join(settings.files_dir_path, file_name)
+    file = open(path_to_file, 'rb')
+    resp = session.put(files_url, params=params, data=file)
+    assert resp.ok
+    return resp.json()
+
+def rename_osf_file_folder(rename_to, nid, file_id):
+    #todo: determine how to get move url
+    url = wb_move_url(nid, file_id)
+    #todo: this is old way to move. The new data params are much simpler
+    data = {
+        'action': 'rename',
+        'rename': rename_to
+    }
+
+    resp = session.post(url, data=json.dumps(data))
+    assert resp.ok
+    return resp.json()
+
+def update_osf_file(file,new_content_file_name, nid):
+
+    params = {
+        'path': file['path'],
+        'provider': 'osfstorage',
+        'nid': nid
+    }
+    files_url = NodeStorage.get_url(nid) + 'files/'
+    path_to_file_with_new_content = os.path.join(settings.files_dir_path, new_content_file_name)
+    content = open(path_to_file_with_new_content, 'rb')
+    resp = session.put(files_url, params=params, data=content)
+    assert resp.ok
+    return resp.json()
+
+def move_osf_file_folder(file_folder_to_move, nid, folder_to_move_under=None):
+
+    url = wb_move_url(nid, folder_to_move_under['path'] if folder_to_move_under else '/')
+    data = {
+        'action':'move',
+        'path':file_folder_to_move['path'] if folder_to_move_under else '/',
+        'rename': file_folder_to_move['name'],
+        'conflict': 'replace',
+    }
+
+    resp = session.post(url, data=json.dumps(data))
+    assert resp.ok
+    return resp.json()
+
+
+
+def delete_osf_file_folder(file_folder, nid):
+    # http://localhost:7777/file?path=/&nid=dz5mg&provider=osfstorage
+    url = NodeStorage.get_url(nid)+'files/'+file_folder['path']
+    resp = session.delete(url)
+    resp.close()
+
+def get_node_by_node_id(node_id):
+    url = NodeStorage.get_url(node_id)
+    resp = session.get(url)
+    assert resp.ok
+    return resp.json()['data']
+
+def create_osf_node(title, parent=None):
+    if parent:
+        url = api_create_node(parent.id)
+        resp = session.post(url, data={'title':title})
+        assert resp.ok
+
+        base = furl(resp.headers['Location'])
+        new_node_id = base.path.segments[0]
+        url = api_node_self(new_node_id)
+        resp = session.get(url)
+        assert resp.ok
+        new_node_dict = resp.json()['data']
+        return dict_to_remote_object(new_node_dict)
+    else:
+        url = api_create_node()
+        resp = session.post(url, data={'title':title})
+        assert resp.ok
+        return dict_to_remote_object(resp.json()['data'])
+
+
+
+def build_path(*args):
+    return os.path.join(project_path, *args)
+
+# usage: nosetests /path/to/manipulate_osf.py -x
+
+
+
+class TestFail(Exception):
+    pass
+
+def assertTrue(func, arg):
+    """
+    checks for condition every 5 seconds. If eventually True then good. else TestFail
+    """
+    for i in range(20):
+        if func(arg):
+            return
+        else:
+            time.sleep(5)
+    raise TestFail
+
+def assertFalse(func, arg):
+    """
+    checks for condition every 5 seconds. If eventually False then good. else TestFail
+    """
+    for i in range(20):
+        if not func(arg):
+            return
+        else:
+            time.sleep(5)
+    raise TestFail
+
+def _delete_all_local():
+    for file_folder in os.listdir(project_path):
+        path = os.path.join(project_path, file_folder)
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+        else:
+            os.remove(path)
+def _delete_all_remote():
+    remote_file_folders = get_node_file_folders(nid1)
+    for file_folder in remote_file_folders:
+        url = wb_file_url(path=file_folder.id,nid=nid1,provider='osfstorage')
+        resp = session.delete(url)
+        resp.close()

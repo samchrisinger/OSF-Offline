@@ -1,12 +1,11 @@
 from nose import with_setup
+from tests.acceptance.utils import *
 
 # usage: nosetests /path/to/manipulate_osf.py -x
 
 
 # This code does NOT the OSFClient and AuthClient.
 # These tests are meant to be standalone
-
-
 
 
 def setUp():
@@ -63,338 +62,338 @@ def test_create_folder_and_file():
     contents = create_local(file_name='something')
     assert_contains_file('something', contents, nid1)
 
-# @with_setup(setUp, teardown)
-# def test_rename_folder():
-#     create_local('original')
-#     assert_contains_folder('original', nid1)
-#
-#     os.rename(build_path('original'), build_path('renamed'))
-#     assert_contains_folder('renamed', nid1)
-#
-#     assert_folder_not_exist('original', nid1)
-#
-# @with_setup(setUp, teardown)
-# def test_rename_folder_with_parents():
-#     create_local('original')
-#     assert_contains_folder('original', nid1)
-#     original = get_remote('original', nid1, is_dir=True)
-#
-#     create_local('original', 'child')
-#     assert_contains_folder('child', nid1, original)
-#
-#     os.rename(build_path('original','child'), build_path('original','renamed'))
-#     assert_contains_folder('renamed', nid1, original)
-#
-#     assert_folder_not_exist('child', nid1,original)
-#
-# @with_setup(setUp, teardown)
-# def test_rename_folder_with_children():
-#     create_local('parent')
-#     assert_contains_folder('parent', nid1)
-#
-#     parent = get_remote('parent', nid1, True)
-#     create_local('parent','child')
-#     assert_contains_folder('child', nid1,parent)
-#
-#
-#     os.rename(build_path('parent'), build_path('renamed'))
-#     assert_contains_folder('renamed', nid1)
-#     renamed = get_remote('renamed', nid1, True)
-#     assert_contains_folder('child', nid1, renamed)
-#
-#     assert_folder_not_exist('original', nid1)
-#
-#
-# @with_setup(setUp, teardown)
-# def test_rename_middle():
-#     create_local('a')
-#     assert_contains_folder('a', nid1)
-#     a = get_remote('a',nid1,True)
-#
-#     create_local('a','b')
-#     assert_contains_folder('b', nid1,a)
-#     b = get_remote('b',nid1,True,a)
-#
-#     create_local('a','b','c')
-#     assert_contains_folder('c', nid1,b)
-#     c = get_remote('c',nid1,True,b)
-#
-#
-#     os.rename(build_path('a','b'), build_path('a','MIDDLE'))
-#     assert_contains_folder('MIDDLE', nid1,a)
-#     renamed = get_remote('MIDDLE', nid1, True,a)
-#     assert_contains_folder('c', nid1, renamed)
-#
-#     assert_folder_not_exist('b', nid1,a)
-#
-#
-#
-# @with_setup(setUp, teardown)
-# def test_rename_file():
-#     contents = create_local(file_name='a')
-#     assert_contains_file('a',contents, nid1)
-#
-#     os.rename(build_path('a'), build_path('renamed'))
-#     assert_contains_file('renamed', contents, nid1)
-#
-#     assert_file_not_exist('a', nid1)
-#
-# @with_setup(setUp, teardown)
-# def test_renamed_nested_file():
-#     create_local('a')
-#     assert_contains_folder('a', nid1)
-#     a = get_remote('a', nid1, True)
-#
-#     content = create_local('a',file_name='file')
-#     assert_contains_file('file', content, nid1, a)
-#
-#     os.rename(build_path('a','file'), build_path('a','renamed'))
-#     assert_contains_file('renamed', content, nid1,a)
-#
-#     assert_file_not_exist('file', nid1, a)
-#
-# @with_setup(setUp, teardown)
-# def test_delete_folder():
-#     create_local('a')
-#     assert_contains_folder('a', nid1)
-#
-#     shutil.rmtree(build_path('a'))
-#     assert_folder_not_exist('a',nid1)
-#
-# @with_setup(setUp, teardown)
-# def test_delete_file():
-#     content = create_local(file_name='myfile')
-#     assert_contains_file('myfile',content, nid1)
-#
-#     os.remove(build_path('myfile'))
-#     assert_file_not_exist('myfile',nid1)
-#
-# @with_setup(setUp, teardown)
-# def test_delete_nested_folder():
-#     create_local('a')
-#     assert_contains_folder('a', nid1)
-#     a = get_remote('a',nid1, True)
-#     create_local('a','b')
-#     assert_contains_folder('b', nid1,a)
-#
-#     shutil.rmtree(build_path('a','b'))
-#     assert_folder_not_exist('b',nid1, a)
-#     assert_contains_folder('a',nid1)
-#
-# @with_setup(setUp, teardown)
-# def test_delete_nested_file():
-#     create_local('a')
-#     assert_contains_folder('a', nid1)
-#     a = get_remote('a',nid1, True)
-#     create_local('a','b')
-#     assert_contains_folder('b', nid1,a)
-#
-#     shutil.rmtree(build_path('a','b'))
-#     assert_folder_not_exist('b',nid1, a)
-#     assert_contains_folder('a',nid1)
-#
-# @with_setup(setUp, teardown)
-# def test_delete_middle_folder():
-#     create_local('a','b','c')
-#     assert_contains_folder('a',nid1)
-#     a = get_remote('a',nid1, True)
-#
-#     assert_contains_folder('b', nid1, a)
-#     b = get_remote('b',nid1, True, a)
-#
-#     assert_contains_folder('c', nid1, b)
-#
-#     shutil.rmtree(build_path('a','b'))
-#     assert_folder_not_exist('b',nid1, a)
-#
-#     assert_contains_folder('a', nid1)
+@with_setup(setUp, teardown)
+def test_rename_folder():
+    create_local('original')
+    assert_contains_folder('original', nid1)
 
-# @with_setup(setUp, teardown)
-# def test_move_folder_from_top_to_subfolder():
-#     create_local('a')
-#     assert_contains_folder('a',nid1)
-#     a = get_remote('a',nid1, True)
-#
-#     create_local('b')
-#     assert_contains_folder('b',nid1)
-#     b = get_remote('b',nid1, True)
-#
-#     shutil.move(build_path('b'), build_path('a'))
-#
-#     assert_folder_not_exist('b',nid1)
-#     assert_contains_folder('b',nid1, a)
-#
-# @with_setup(setUp, teardown)
-# def test_move_folder_from_top_to_three_levels_down_subfolder():
-#     create_local('a')
-#     assert_contains_folder('a',nid1)
-#     a = get_remote('a',nid1, True)
-#
-#     create_local('a','b')
-#     assert_contains_folder('b',nid1,a)
-#     b = get_remote('b',nid1, True,a)
-#
-#     create_local('a','b','c')
-#     assert_contains_folder('c',nid1,b)
-#     c = get_remote('c',nid1, True,b)
-#
-#     create_local('to_move')
-#     assert_contains_folder('to_move',nid1)
-#     to_move = get_remote('to_move',nid1, True)
-#
-#
-#     shutil.move(build_path('to_move'), build_path('a','b','c'))
-#
-#     assert_folder_not_exist('to_move',nid1)
-#     assert_contains_folder('to_move',nid1, c)
-#
-#
-# @with_setup(setUp, teardown)
-# def test_move_folder_from_top_non_empty_subfolder():
-#     create_local('a')
-#     assert_contains_folder('a',nid1)
-#     a = get_remote('a',nid1, True)
-#
-#     create_local('a','b')
-#     assert_contains_folder('b',nid1,a)
-#     b = get_remote('b',nid1, True,a)
-#
-#     create_local('a','b','c')
-#     assert_contains_folder('c',nid1,b)
-#     c = get_remote('c',nid1, True,b)
-#
-#     create_local('a','b',file_name='a_fun_file')
-#
-#     create_local('to_move')
-#     assert_contains_folder('to_move',nid1)
-#     # to_move = get_remote('to_move',nid1, True)
-#
-#
-#     shutil.move(build_path('to_move'), build_path('a','b','c'))
-#
-#     assert_folder_not_exist('to_move',nid1)
-#     assert_contains_folder('to_move',nid1, c)
-#
-# @with_setup(setUp, teardown)
-# def test_move_non_empty_folder_from_top_to_subfolder():
-#     create_local('a')
-#     assert_contains_folder('a',nid1)
-#     a = get_remote('a',nid1, True)
-#     create_local('a','b')
-#     assert_contains_folder('b',nid1,a)
-#     contents = create_local('a', file_name='myfile')
-#     assert_contains_file('myfile', contents, nid1,a)
-#
-#     create_local('other_folder')
-#     assert_contains_folder('other_folder',nid1)
-#     other_folder = get_remote('other_folder',nid1, True)
-#
-#     shutil.move(build_path('a'), build_path('other_folder'))
-#
-#     assert_contains_folder('a', nid1, other_folder)
-#     moved_a = get_remote('a', nid1, True,other_folder)
-#     assert_contains_folder('b', nid1, moved_a)
-#     assert_contains_file('myfile',contents,nid1, moved_a)
-#
-#     assert_folder_not_exist('a',nid1)
-#
-#
-# @with_setup(setUp, teardown)
-# def test_move_non_empty_folder_from_top_to_nonempty_subfolder():
-#     create_local('a')
-#     assert_contains_folder('a',nid1)
-#     a = get_remote('a',nid1, True)
-#     create_local('a','b')
-#     assert_contains_folder('b',nid1,a)
-#     contents = create_local('a', file_name='myfile')
-#     assert_contains_file('myfile', contents, nid1,a)
-#
-#     create_local('other_folder')
-#     assert_contains_folder('other_folder',nid1)
-#     other_folder = get_remote('other_folder',nid1, True)
-#
-#     shutil.move(build_path('a'), build_path('other_folder'))
-#
-#     assert_contains_folder('a', nid1, other_folder)
-#     moved_a = get_remote('a', nid1, True,other_folder)
-#     assert_contains_folder('b', nid1, moved_a)
-#     assert_contains_file('myfile',contents,nid1, moved_a)
-#
-#     assert_folder_not_exist('a',nid1)
-#
-# @with_setup(setUp, teardown)
-# def test_move_subfolder_to_top():
-#     create_local('a')
-#     assert_contains_folder('a',nid1)
-#     a = get_remote('a', nid1, True)
-#     create_local('a','b')
-#     assert_contains_folder('b',nid1, a)
-#
-#     shutil.move(build_path('a','b'), build_path())
-#
-#     assert_contains_folder('a',nid1)
-#     assert_contains_folder('b',nid1)
-#     assert_folder_not_exist('b',nid1, a)
-#
-# @with_setup(setUp, teardown)
-# def test_move_nonempty_subfolder_to_top():
-#     create_local('a')
-#     assert_contains_folder('a',nid1)
-#     a = get_remote('a', nid1, True)
-#
-#     create_local('a','b')
-#     assert_contains_folder('b',nid1,a)
-#     b = get_remote('b', nid1, True,a)
-#
-#     create_local('a','b','c')
-#     assert_contains_folder('c',nid1,b)
-#     c = get_remote('c', nid1, True,b)
-#
-#     contents = create_local('a','b',file_name='a_file.txt')
-#
-#
-#     shutil.move(build_path('a','b'), build_path())
-#
-#     assert_contains_folder('a',nid1)
-#     assert_contains_folder('b',nid1)
-#     new_b = get_remote('b',nid1, True)
-#     assert_folder_not_exist('b',nid1, a)
-#     assert_contains_file('a_file.txt', contents, new_b)
-#     assert_contains_folder('c',nid1,new_b)
+    os.rename(build_path('original'), build_path('renamed'))
+    assert_contains_folder('renamed', nid1)
+
+    assert_folder_not_exist('original', nid1)
+
+@with_setup(setUp, teardown)
+def test_rename_folder_with_parents():
+    create_local('original')
+    assert_contains_folder('original', nid1)
+    original = get_remote('original', nid1, is_dir=True)
+
+    create_local('original', 'child')
+    assert_contains_folder('child', nid1, original)
+
+    os.rename(build_path('original','child'), build_path('original','renamed'))
+    assert_contains_folder('renamed', nid1, original)
+
+    assert_folder_not_exist('child', nid1,original)
+
+@with_setup(setUp, teardown)
+def test_rename_folder_with_children():
+    create_local('parent')
+    assert_contains_folder('parent', nid1)
+
+    parent = get_remote('parent', nid1, True)
+    create_local('parent','child')
+    assert_contains_folder('child', nid1,parent)
+
+
+    os.rename(build_path('parent'), build_path('renamed'))
+    assert_contains_folder('renamed', nid1)
+    renamed = get_remote('renamed', nid1, True)
+    assert_contains_folder('child', nid1, renamed)
+
+    assert_folder_not_exist('original', nid1)
+
+
+@with_setup(setUp, teardown)
+def test_rename_middle():
+    create_local('a')
+    assert_contains_folder('a', nid1)
+    a = get_remote('a',nid1,True)
+
+    create_local('a','b')
+    assert_contains_folder('b', nid1,a)
+    b = get_remote('b',nid1,True,a)
+
+    create_local('a','b','c')
+    assert_contains_folder('c', nid1,b)
+    c = get_remote('c',nid1,True,b)
+
+
+    os.rename(build_path('a','b'), build_path('a','MIDDLE'))
+    assert_contains_folder('MIDDLE', nid1,a)
+    renamed = get_remote('MIDDLE', nid1, True,a)
+    assert_contains_folder('c', nid1, renamed)
+
+    assert_folder_not_exist('b', nid1,a)
 
 
 
-# @with_setup(setUp, teardown)
-# def test_no_subfolder_is_called_components():
-#     create_local('a','Components')
-#     assert_contains_folder('a', nid1)
-#     a_folder = get_remote('a', nid1, True)
-#
-#     assert_folder_not_exist('Components',nid1, a_folder)
-#
-#     create_local('a','a','Components')
-#     assert_contains_folder('a', nid1, a_folder)
-#     aa_folder = get_remote('a', nid1, True, a_folder)
-#     assert_folder_not_exist('Components', nid1, aa_folder)
-#
-#
-# @with_setup(setUp, teardown)
-# def test_no_subfile_is_called_components():
-#     create_local('a','Components')
-#     assert_contains_folder('a', nid1)
-#     a_folder = get_remote('a', nid1, True)
-#
-#     assert_file_not_exist('Components',nid1, a_folder)
-#
-#     create_local('a','a','Components')
-#     assert_contains_folder('a', nid1, a_folder)
-#     aa_folder = get_remote('a', nid1, True, a_folder)
-#     assert_file_not_exist('Components', nid1, aa_folder)
-#
-#
-# #todo: what do we do when a user creates a local FILE called Components
-# #probably, just give user an alert that says Components folder must exist to sync components.
-# # and then dont sync components...
-# @with_setup(setUp, teardown)
-# def test_what_happens_when_user_creates_local_file_called_Components():
-#     pass
+@with_setup(setUp, teardown)
+def test_rename_file():
+    contents = create_local(file_name='a')
+    assert_contains_file('a',contents, nid1)
+
+    os.rename(build_path('a'), build_path('renamed'))
+    assert_contains_file('renamed', contents, nid1)
+
+    assert_file_not_exist('a', nid1)
+
+@with_setup(setUp, teardown)
+def test_renamed_nested_file():
+    create_local('a')
+    assert_contains_folder('a', nid1)
+    a = get_remote('a', nid1, True)
+
+    content = create_local('a',file_name='file')
+    assert_contains_file('file', content, nid1, a)
+
+    os.rename(build_path('a','file'), build_path('a','renamed'))
+    assert_contains_file('renamed', content, nid1,a)
+
+    assert_file_not_exist('file', nid1, a)
+
+@with_setup(setUp, teardown)
+def test_delete_folder():
+    create_local('a')
+    assert_contains_folder('a', nid1)
+
+    shutil.rmtree(build_path('a'))
+    assert_folder_not_exist('a',nid1)
+
+@with_setup(setUp, teardown)
+def test_delete_file():
+    content = create_local(file_name='myfile')
+    assert_contains_file('myfile',content, nid1)
+
+    os.remove(build_path('myfile'))
+    assert_file_not_exist('myfile',nid1)
+
+@with_setup(setUp, teardown)
+def test_delete_nested_folder():
+    create_local('a')
+    assert_contains_folder('a', nid1)
+    a = get_remote('a',nid1, True)
+    create_local('a','b')
+    assert_contains_folder('b', nid1,a)
+
+    shutil.rmtree(build_path('a','b'))
+    assert_folder_not_exist('b',nid1, a)
+    assert_contains_folder('a',nid1)
+
+@with_setup(setUp, teardown)
+def test_delete_nested_file():
+    create_local('a')
+    assert_contains_folder('a', nid1)
+    a = get_remote('a',nid1, True)
+    create_local('a','b')
+    assert_contains_folder('b', nid1,a)
+
+    shutil.rmtree(build_path('a','b'))
+    assert_folder_not_exist('b',nid1, a)
+    assert_contains_folder('a',nid1)
+
+@with_setup(setUp, teardown)
+def test_delete_middle_folder():
+    create_local('a','b','c')
+    assert_contains_folder('a',nid1)
+    a = get_remote('a',nid1, True)
+
+    assert_contains_folder('b', nid1, a)
+    b = get_remote('b',nid1, True, a)
+
+    assert_contains_folder('c', nid1, b)
+
+    shutil.rmtree(build_path('a','b'))
+    assert_folder_not_exist('b',nid1, a)
+
+    assert_contains_folder('a', nid1)
+
+@with_setup(setUp, teardown)
+def test_move_folder_from_top_to_subfolder():
+    create_local('a')
+    assert_contains_folder('a',nid1)
+    a = get_remote('a',nid1, True)
+
+    create_local('b')
+    assert_contains_folder('b',nid1)
+    b = get_remote('b',nid1, True)
+
+    shutil.move(build_path('b'), build_path('a'))
+
+    assert_folder_not_exist('b',nid1)
+    assert_contains_folder('b',nid1, a)
+
+@with_setup(setUp, teardown)
+def test_move_folder_from_top_to_three_levels_down_subfolder():
+    create_local('a')
+    assert_contains_folder('a',nid1)
+    a = get_remote('a',nid1, True)
+
+    create_local('a','b')
+    assert_contains_folder('b',nid1,a)
+    b = get_remote('b',nid1, True,a)
+
+    create_local('a','b','c')
+    assert_contains_folder('c',nid1,b)
+    c = get_remote('c',nid1, True,b)
+
+    create_local('to_move')
+    assert_contains_folder('to_move',nid1)
+    to_move = get_remote('to_move',nid1, True)
+
+
+    shutil.move(build_path('to_move'), build_path('a','b','c'))
+
+    assert_folder_not_exist('to_move',nid1)
+    assert_contains_folder('to_move',nid1, c)
+
+
+@with_setup(setUp, teardown)
+def test_move_folder_from_top_non_empty_subfolder():
+    create_local('a')
+    assert_contains_folder('a',nid1)
+    a = get_remote('a',nid1, True)
+
+    create_local('a','b')
+    assert_contains_folder('b',nid1,a)
+    b = get_remote('b',nid1, True,a)
+
+    create_local('a','b','c')
+    assert_contains_folder('c',nid1,b)
+    c = get_remote('c',nid1, True,b)
+
+    create_local('a','b',file_name='a_fun_file')
+
+    create_local('to_move')
+    assert_contains_folder('to_move',nid1)
+    # to_move = get_remote('to_move',nid1, True)
+
+
+    shutil.move(build_path('to_move'), build_path('a','b','c'))
+
+    assert_folder_not_exist('to_move',nid1)
+    assert_contains_folder('to_move',nid1, c)
+
+@with_setup(setUp, teardown)
+def test_move_non_empty_folder_from_top_to_subfolder():
+    create_local('a')
+    assert_contains_folder('a',nid1)
+    a = get_remote('a',nid1, True)
+    create_local('a','b')
+    assert_contains_folder('b',nid1,a)
+    contents = create_local('a', file_name='myfile')
+    assert_contains_file('myfile', contents, nid1,a)
+
+    create_local('other_folder')
+    assert_contains_folder('other_folder',nid1)
+    other_folder = get_remote('other_folder',nid1, True)
+
+    shutil.move(build_path('a'), build_path('other_folder'))
+
+    assert_contains_folder('a', nid1, other_folder)
+    moved_a = get_remote('a', nid1, True,other_folder)
+    assert_contains_folder('b', nid1, moved_a)
+    assert_contains_file('myfile',contents,nid1, moved_a)
+
+    assert_folder_not_exist('a',nid1)
+
+
+@with_setup(setUp, teardown)
+def test_move_non_empty_folder_from_top_to_nonempty_subfolder():
+    create_local('a')
+    assert_contains_folder('a',nid1)
+    a = get_remote('a',nid1, True)
+    create_local('a','b')
+    assert_contains_folder('b',nid1,a)
+    contents = create_local('a', file_name='myfile')
+    assert_contains_file('myfile', contents, nid1,a)
+
+    create_local('other_folder')
+    assert_contains_folder('other_folder',nid1)
+    other_folder = get_remote('other_folder',nid1, True)
+
+    shutil.move(build_path('a'), build_path('other_folder'))
+
+    assert_contains_folder('a', nid1, other_folder)
+    moved_a = get_remote('a', nid1, True,other_folder)
+    assert_contains_folder('b', nid1, moved_a)
+    assert_contains_file('myfile',contents,nid1, moved_a)
+
+    assert_folder_not_exist('a',nid1)
+
+@with_setup(setUp, teardown)
+def test_move_subfolder_to_top():
+    create_local('a')
+    assert_contains_folder('a',nid1)
+    a = get_remote('a', nid1, True)
+    create_local('a','b')
+    assert_contains_folder('b',nid1, a)
+
+    shutil.move(build_path('a','b'), build_path())
+
+    assert_contains_folder('a',nid1)
+    assert_contains_folder('b',nid1)
+    assert_folder_not_exist('b',nid1, a)
+
+@with_setup(setUp, teardown)
+def test_move_nonempty_subfolder_to_top():
+    create_local('a')
+    assert_contains_folder('a',nid1)
+    a = get_remote('a', nid1, True)
+
+    create_local('a','b')
+    assert_contains_folder('b',nid1,a)
+    b = get_remote('b', nid1, True,a)
+
+    create_local('a','b','c')
+    assert_contains_folder('c',nid1,b)
+    c = get_remote('c', nid1, True,b)
+
+    contents = create_local('a','b',file_name='a_file.txt')
+
+
+    shutil.move(build_path('a','b'), build_path())
+
+    assert_contains_folder('a',nid1)
+    assert_contains_folder('b',nid1)
+    new_b = get_remote('b',nid1, True)
+    assert_folder_not_exist('b',nid1, a)
+    assert_contains_file('a_file.txt', contents, new_b)
+    assert_contains_folder('c',nid1,new_b)
+
+
+
+@with_setup(setUp, teardown)
+def test_no_subfolder_is_called_components():
+    create_local('a','Components')
+    assert_contains_folder('a', nid1)
+    a_folder = get_remote('a', nid1, True)
+
+    assert_folder_not_exist('Components',nid1, a_folder)
+
+    create_local('a','a','Components')
+    assert_contains_folder('a', nid1, a_folder)
+    aa_folder = get_remote('a', nid1, True, a_folder)
+    assert_folder_not_exist('Components', nid1, aa_folder)
+
+
+@with_setup(setUp, teardown)
+def test_no_subfile_is_called_components():
+    create_local('a','Components')
+    assert_contains_folder('a', nid1)
+    a_folder = get_remote('a', nid1, True)
+
+    assert_file_not_exist('Components',nid1, a_folder)
+
+    create_local('a','a','Components')
+    assert_contains_folder('a', nid1, a_folder)
+    aa_folder = get_remote('a', nid1, True, a_folder)
+    assert_file_not_exist('Components', nid1, aa_folder)
+
+
+#todo: what do we do when a user creates a local FILE called Components
+#probably, just give user an alert that says Components folder must exist to sync components.
+# and then dont sync components...
+@with_setup(setUp, teardown)
+def test_what_happens_when_user_creates_local_file_called_Components():
+    pass
