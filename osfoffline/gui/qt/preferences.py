@@ -176,6 +176,6 @@ class NodeFetcher(QtCore.QObject):
             client_user = client.get_user()
             user_nodes = client_user.get_nodes()
         except Exception as e:
-            logging.exception(e)
+            logging.warning(e)
 
         self.finished.emit([node for node in user_nodes if 'parent' not in node.raw['relationships']])
